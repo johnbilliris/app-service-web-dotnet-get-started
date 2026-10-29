@@ -44,8 +44,14 @@ jobs:
           msbuild .\aspnet-get-started\aspnet-get-started.csproj `
             /p:Configuration=Release `
             /p:DeployOnBuild=true `
+            /p:DeployDefaultTarget=WebPublish `
             /p:WebPublishMethod=FileSystem `
             /p:publishUrl="$env:RUNNER_TEMP\publish"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (!(Test-Path "$env:RUNNER_TEMP\publish\Web.config") -or
+              !(Test-Path "$env:RUNNER_TEMP\publish\bin\aspnet-get-started.dll")) {
+            throw "MSBuild did not publish the application to the deployment folder."
+          }
 
       - name: Log in to Azure
         uses: azure/login@v3
