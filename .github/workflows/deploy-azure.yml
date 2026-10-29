@@ -1,0 +1,59 @@
+name: Deploy to Azure App Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      app-name:
+        description: Name of the existing Windows Azure App Service to deploy to
+        required: true
+        type: string
+        default: app-auae-edg
+
+permissions:
+  contents: read
+
+concurrency:
+  group: azure-deploy-${{ inputs.app-name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      AZURE_CORE_OUTPUT: none
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore packages
+        run: nuget restore .\aspnet-get-started.sln -NonInteractive
+
+      - name: Build and publish
+        shell: pwsh
+        run: |
+          msbuild .\aspnet-get-started\aspnet-get-started.csproj `
+            /p:Configuration=Release `
+            /p:DeployOnBuild=true `
+            /p:WebPublishMethod=FileSystem `
+            /p:publishUrl="$env:RUNNER_TEMP\publish"
+
+      - name: Log in to Azure
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIAL }}
+
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ inputs.app-name }}
+          slot-name: production
+          package: ${{ runner.temp }}\publish
