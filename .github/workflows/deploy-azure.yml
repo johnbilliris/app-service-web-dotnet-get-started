@@ -21,7 +21,8 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 30
     env:
-      AZURE_CORE_OUTPUT: none
+      # The deployment action parses Azure CLI JSON to read the login session.
+      AZURE_CORE_OUTPUT: json
     steps:
       - name: Check out source
         uses: actions/checkout@v6
